@@ -1,0 +1,56 @@
+services:
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # The JDBC URL to connect to the MySQL database
+      # 'db' is the name of the database service in this file, which Docker Compose resolves to its internal IP
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/mytutor?useSSL=false&allowPublicKeyRetrieval=true
+      # Database username
+      - SPRING_DATASOURCE_USERNAME=user
+      # Database password
+      - SPRING_DATASOURCE_PASSWORD=password
+      # Spring profile (e.g., 'prod', 'dev')
+      - SPRING_PROFILES_ACTIVE=dev
+      # Other variables, such as the timezone, which we set in the Dockerfile
+      # - TZ=Asia/Ho_Chi_Minh
+    # Wait for the database service to be healthy before starting this service
+    # This ensures the app doesn't try to connect to a non-existent database
+    depends_on:
+      db:
+        condition: service_healthy
+    # Define the network the service will be a part of
+    networks:
+      - mytutor-network
+
+  db:
+    image: mysql:8.0
+    # Set the container name for easier identification
+    container_name: mytutor_db
+    # Define environment variables for the MySQL server configuration
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=mytutor
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - mytutor-network
+
+volumes:
+  mysql-data:
+
+networks:
+  mytutor-network:
+    driver: bridge
